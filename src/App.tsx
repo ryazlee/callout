@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
-import { clearGame, loadGame, saveGame, type GameState } from './storage'
+import { containsNumber } from './numbers'
+import {
+  appendCallout,
+  clearGame,
+  latestCallout,
+  loadGame,
+  saveGame,
+  type GameState,
+} from './storage'
 import { useSpeechListener } from './useSpeechListener'
 import './App.css'
 
-function formatTime(timestamp: number | null): string {
-  if (!timestamp) return ''
+function formatTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
     minute: '2-digit',
@@ -21,10 +28,8 @@ function App() {
 
   const speech = useSpeechListener({
     onFinalTranscript: (transcript) => {
-      setGame({
-        lastSaid: transcript,
-        updatedAt: Date.now(),
-      })
+      if (!containsNumber(transcript)) return
+      setGame((current) => appendCallout(current, transcript))
     },
   })
 
@@ -41,14 +46,16 @@ function App() {
     setGame(clearGame())
   }
 
-  const displayText = speech.interim || game.lastSaid
-  const isLive = Boolean(speech.interim)
+  const latest = latestCallout(game)
+  const interimHasNumber = containsNumber(speech.interim)
+  const displayText = interimHasNumber ? speech.interim : latest?.text
+  const isLive = interimHasNumber
 
   return (
     <div className="app">
       <header className="pageHeader">
         <h1>Callout</h1>
-        <p className="subtitle">Last thing said during the game.</p>
+        <p className="subtitle">Only saves when a number is said.</p>
       </header>
 
       <main className="stage">
@@ -56,8 +63,20 @@ function App() {
         <p className={`said ${displayText ? 'has-text' : ''}`}>
           {displayText || 'Nothing yet'}
         </p>
-        {game.updatedAt && !isLive ? (
-          <p className="meta">{formatTime(game.updatedAt)}</p>
+        {latest && !isLive ? <p className="meta">{formatTime(latest.at)}</p> : null}
+
+        {game.history.length > 0 ? (
+          <section className="history" aria-label="Callout history">
+            <p className="section-label">History</p>
+            <ul className="history-list">
+              {game.history.map((entry) => (
+                <li key={`${entry.at}-${entry.text}`} className="history-item">
+                  <span className="history-text">{entry.text}</span>
+                  <span className="history-time">{formatTime(entry.at)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
       </main>
 
@@ -67,7 +86,7 @@ function App() {
         ) : speech.error ? (
           <p className="status error">{speech.error}</p>
         ) : speech.listening ? (
-          <p className="status">Listening — keep this page open</p>
+          <p className="status">Listening for numbers — keep this page open</p>
         ) : null}
 
         <button
