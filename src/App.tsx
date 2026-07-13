@@ -61,6 +61,7 @@ function App() {
   const interimHasNumber = containsNumber(speech.interim)
   const displayText = interimHasNumber ? speech.interim : latest?.text
   const isLive = interimHasNumber
+  const isEmpty = !displayText
   const pastHistory = game.history.slice(1)
 
   return (
@@ -100,10 +101,30 @@ function App() {
 
       <main className="stage">
         <div className="scoreboard">
-          <p className={`said ${displayText ? 'has-text' : ''}`}>
-            {displayText || '—'}
-          </p>
-          {latest && !isLive ? <p className="meta">{formatTime(latest.at)}</p> : null}
+          {isEmpty ? (
+            <p className="empty-prompt">
+              {speech.listening ? (
+                <>
+                  <span className="empty-emoji" aria-hidden="true">
+                    👂
+                  </span>
+                  Listening… call out that score!
+                </>
+              ) : (
+                <>
+                  <span className="empty-emoji" aria-hidden="true">
+                    🏐
+                  </span>
+                  Hit Listen and yell the score
+                </>
+              )}
+            </p>
+          ) : (
+            <>
+              <p className="said has-text">{displayText}</p>
+              {latest && !isLive ? <p className="meta">{formatTime(latest.at)}</p> : null}
+            </>
+          )}
         </div>
 
         {pastHistory.length > 0 ? (
