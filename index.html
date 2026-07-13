@@ -14,6 +14,21 @@
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <title>Callout</title>
+    <script>
+      try {
+        var saved = localStorage.getItem('callout-theme')
+        var dark =
+          saved === 'dark' ||
+          (saved !== 'light' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) {
+          document.documentElement.classList.add('theme-dark')
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', '#111827')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
