@@ -8,6 +8,7 @@ import {
   saveGame,
   type GameState,
 } from './storage'
+import { applyTheme, loadTheme, saveTheme, type Theme } from './theme'
 import { useSpeechListener } from './useSpeechListener'
 import './App.css'
 
@@ -21,10 +22,16 @@ function formatTime(timestamp: number): string {
 
 function App() {
   const [game, setGame] = useState<GameState>(() => loadGame())
+  const [theme, setTheme] = useState<Theme>(() => loadTheme())
 
   useEffect(() => {
     saveGame(game)
   }, [game])
+
+  useEffect(() => {
+    applyTheme(theme)
+    saveTheme(theme)
+  }, [theme])
 
   const speech = useSpeechListener({
     onFinalTranscript: (transcript) => {
@@ -46,30 +53,46 @@ function App() {
     setGame(clearGame())
   }
 
+  function handleThemeToggle() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
   const latest = latestCallout(game)
   const interimHasNumber = containsNumber(speech.interim)
   const displayText = interimHasNumber ? speech.interim : latest?.text
   const isLive = interimHasNumber
+  const pastHistory = game.history.slice(1)
 
   return (
     <div className="app">
       <header className="pageHeader">
-        <h1>Callout</h1>
-        <p className="subtitle">Only saves when a number is said.</p>
+        <div className="brand">
+          <h1>Callout</h1>
+          <p className="subtitle">Only saves when a number is said.</p>
+        </div>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={handleThemeToggle}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
       </header>
 
       <main className="stage">
-        <p className="section-label">{isLive ? 'Hearing' : 'Last said'}</p>
-        <p className={`said ${displayText ? 'has-text' : ''}`}>
-          {displayText || 'Nothing yet'}
-        </p>
-        {latest && !isLive ? <p className="meta">{formatTime(latest.at)}</p> : null}
+        <div className="scoreboard">
+          <p className={`said ${displayText ? 'has-text' : ''}`}>
+            {displayText || '—'}
+          </p>
+          {latest && !isLive ? <p className="meta">{formatTime(latest.at)}</p> : null}
+        </div>
 
-        {game.history.length > 0 ? (
+        {pastHistory.length > 0 ? (
           <section className="history" aria-label="Callout history">
             <p className="section-label">History</p>
             <ul className="history-list">
-              {game.history.map((entry) => (
+              {pastHistory.map((entry) => (
                 <li key={`${entry.at}-${entry.text}`} className="history-item">
                   <span className="history-text">{entry.text}</span>
                   <span className="history-time">{formatTime(entry.at)}</span>
