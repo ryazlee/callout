@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { containsNumber } from './numbers'
+import { loadPrefs, savePrefs } from './prefs'
 import {
   appendCallout,
   clearGame,
@@ -12,6 +13,8 @@ import { applyTheme, loadTheme, saveTheme, type Theme } from './theme'
 import { useSpeechListener } from './useSpeechListener'
 import './App.css'
 
+const RECENT_HISTORY_COUNT = 3
+
 function formatTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
@@ -23,6 +26,9 @@ function formatTime(timestamp: number): string {
 function App() {
   const [game, setGame] = useState<GameState>(() => loadGame())
   const [theme, setTheme] = useState<Theme>(() => loadTheme())
+  const [historyVisible, setHistoryVisible] = useState(
+    () => loadPrefs().historyVisible,
+  )
 
   useEffect(() => {
     saveGame(game)
@@ -32,6 +38,10 @@ function App() {
     applyTheme(theme)
     saveTheme(theme)
   }, [theme])
+
+  useEffect(() => {
+    savePrefs({ historyVisible })
+  }, [historyVisible])
 
   const speech = useSpeechListener({
     onFinalTranscript: (transcript) => {
@@ -62,7 +72,8 @@ function App() {
   const displayText = interimHasNumber ? speech.interim : latest?.text
   const isLive = interimHasNumber
   const isEmpty = !displayText
-  const pastHistory = game.history.slice(1)
+  const recentHistory = game.history.slice(1, 1 + RECENT_HISTORY_COUNT)
+  const hasHistory = recentHistory.length > 0
 
   return (
     <div className="app">
@@ -77,25 +88,7 @@ function App() {
           onClick={handleThemeToggle}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {theme === 'dark' ? (
-            <svg className="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="12" cy="12" r="4" fill="currentColor" />
-              <path
-                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          ) : (
-            <svg className="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M21 14.5A8.5 8.5 0 0 1 9.5 3 7 7 0 1 0 21 14.5z"
-                fill="currentColor"
-              />
-            </svg>
-          )}
+          <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
         </button>
       </header>
 
@@ -127,11 +120,20 @@ function App() {
           )}
         </div>
 
-        {pastHistory.length > 0 ? (
+        {hasHistory && historyVisible ? (
           <section className="history" aria-label="Callout history">
-            <p className="section-label">History</p>
+            <div className="history-header">
+              <p className="section-label">History</p>
+              <button
+                type="button"
+                className="text-btn"
+                onClick={() => setHistoryVisible(false)}
+              >
+                Hide
+              </button>
+            </div>
             <ul className="history-list">
-              {pastHistory.map((entry) => (
+              {recentHistory.map((entry) => (
                 <li key={`${entry.at}-${entry.text}`} className="history-item">
                   <span className="history-text">{entry.text}</span>
                   <span className="history-time">{formatTime(entry.at)}</span>
@@ -139,6 +141,16 @@ function App() {
               ))}
             </ul>
           </section>
+        ) : null}
+
+        {hasHistory && !historyVisible ? (
+          <button
+            type="button"
+            className="text-btn history-reopen"
+            onClick={() => setHistoryVisible(true)}
+          >
+            Show history
+          </button>
         ) : null}
       </main>
 
@@ -151,18 +163,20 @@ function App() {
           <p className="status">Listening for numbers — keep this page open</p>
         ) : null}
 
-        <button
-          type="button"
-          className={`btn btn-primary ${speech.listening ? 'listening' : ''}`}
-          onClick={handleListenToggle}
-          disabled={!speech.supported}
-        >
-          {speech.listening ? 'Stop' : 'Listen'}
-        </button>
+        <div className="actions">
+          <button
+            type="button"
+            className={`btn btn-primary ${speech.listening ? 'listening' : ''}`}
+            onClick={handleListenToggle}
+            disabled={!speech.supported}
+          >
+            {speech.listening ? 'Stop' : 'Listen'}
+          </button>
 
-        <button type="button" className="btn btn-secondary" onClick={handleNewGame}>
-          New game
-        </button>
+          <button type="button" className="btn btn-secondary" onClick={handleNewGame}>
+            New game
+          </button>
+        </div>
       </footer>
     </div>
   )
