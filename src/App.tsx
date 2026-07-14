@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { containsNumber } from './numbers'
+import { containsNumber, toNumberForm } from './numbers'
 import { loadPrefs, savePrefs } from './prefs'
 import {
   appendCallout,
@@ -44,7 +44,7 @@ function App() {
   const speech = useSpeechListener({
     onFinalTranscript: (transcript) => {
       if (!containsNumber(transcript)) return
-      setGame((current) => appendCallout(current, transcript))
+      setGame((current) => appendCallout(current, toNumberForm(transcript)))
     },
   })
 
@@ -67,7 +67,8 @@ function App() {
 
   const latest = latestCallout(game)
   const interimHasNumber = containsNumber(speech.interim)
-  const displayText = interimHasNumber ? speech.interim : latest?.text
+  const rawDisplay = interimHasNumber ? speech.interim : latest?.text
+  const displayText = rawDisplay ? toNumberForm(rawDisplay) : undefined
   const isLive = interimHasNumber
   const isEmpty = !displayText
   const recentHistory = game.history.slice(1)
@@ -133,7 +134,7 @@ function App() {
             <ul className="history-list">
               {recentHistory.map((entry) => (
                 <li key={`${entry.at}-${entry.text}`} className="history-item">
-                  <span className="history-text">{entry.text}</span>
+                  <span className="history-text">{toNumberForm(entry.text)}</span>
                   <span className="history-time">{formatTime(entry.at)}</span>
                 </li>
               ))}
