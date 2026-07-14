@@ -13,8 +13,6 @@ import { applyTheme, loadTheme, saveTheme, type Theme } from './theme'
 import { useSpeechListener } from './useSpeechListener'
 import './App.css'
 
-const RECENT_HISTORY_COUNT = 3
-
 function formatTime(timestamp: number): string {
   return new Intl.DateTimeFormat(undefined, {
     hour: 'numeric',
@@ -72,7 +70,7 @@ function App() {
   const displayText = interimHasNumber ? speech.interim : latest?.text
   const isLive = interimHasNumber
   const isEmpty = !displayText
-  const recentHistory = game.history.slice(1, 1 + RECENT_HISTORY_COUNT)
+  const recentHistory = game.history.slice(1)
   const hasHistory = recentHistory.length > 0
 
   return (
